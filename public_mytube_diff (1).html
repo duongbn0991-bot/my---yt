@@ -1,0 +1,2350 @@
+--- public/mytube.html (原始)
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTube - Lưu trữ & Xem Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #404040; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: #0f0f0f;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+            border-bottom: 1px solid #272727;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-btn:hover { background: #272727; }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+        }
+
+        .logo-icon {
+            background: #dc2626;
+            border-radius: 6px;
+            padding: 4px 6px;
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: -0.5px;
+        }
+
+        .header-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 0 20px;
+        }
+
+        .search-box {
+            display: flex;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .search-box input {
+            flex: 1;
+            background: #121212;
+            border: 1px solid #303030;
+            border-right: none;
+            border-radius: 20px 0 0 20px;
+            padding: 8px 16px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-box input:focus { border-color: #1c62b9; }
+        .search-box input::placeholder { color: #888; }
+
+        .search-btn {
+            background: #222;
+            border: 1px solid #303030;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 20px;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-btn:hover { background: #303030; }
+
+        .upload-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #272727;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: 16px;
+        }
+
+        .upload-btn:hover { background: #303030; }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 56px;
+            bottom: 0;
+            width: 240px;
+            background: #0f0f0f;
+            overflow-y: auto;
+            padding: 12px;
+            z-index: 90;
+            transition: transform 0.2s;
+        }
+
+        .sidebar.hidden { transform: translateX(-100%); }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            font-size: 14px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .sidebar-item:hover { background: #272727; }
+        .sidebar-item.active { background: #272727; }
+
+        .sidebar-divider {
+            border-top: 1px solid #272727;
+            margin: 12px 0;
+        }
+
+        .sidebar-title {
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #aaa;
+            font-weight: 500;
+        }
+
+        .sidebar-stats {
+            padding: 4px 12px;
+            font-size: 12px;
+            color: #888;
+            line-height: 1.8;
+        }
+
+        /* Main Content */
+        .main {
+            margin-top: 56px;
+            margin-left: 240px;
+            padding: 24px;
+            transition: margin-left 0.2s;
+        }
+
+        .main.expanded { margin-left: 0; }
+
+        /* Video Grid */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .video-card {
+            cursor: pointer;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .video-card:hover .video-title { color: #fff; }
+
+        .thumbnail-container {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .thumbnail-container img,
+        .thumbnail-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .thumbnail-container .hover-video {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .video-card:hover .hover-video { opacity: 1; }
+        .video-card:hover .thumbnail-img { opacity: 0; }
+
+        .duration-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .play-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .video-card:hover .play-overlay { opacity: 1; }
+
+        .play-circle {
+            width: 48px;
+            height: 48px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-info {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .channel-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .video-meta { flex: 1; min-width: 0; }
+
+        .video-title {
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #e0e0e0;
+        }
+
+        .video-channel {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        .video-stats {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .delete-btn {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            align-self: flex-start;
+        }
+
+        .video-card:hover .delete-btn { opacity: 1; }
+        .delete-btn:hover { background: #303030; }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            color: #888;
+        }
+
+        .empty-state svg { width: 100px; height: 100px; opacity: 0.3; margin-bottom: 16px; }
+        .empty-state h3 { font-size: 20px; margin-bottom: 8px; color: #aaa; }
+        .empty-state p { font-size: 14px; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 16px;
+        }
+
+        .modal-overlay.hidden { display: none; }
+
+        .modal {
+            background: #212121;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 { font-size: 20px; font-weight: bold; }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover { background: #303030; }
+
+        .upload-area {
+            border: 2px dashed #404040;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .upload-area:hover { border-color: #dc2626; }
+
+        .upload-area svg { width: 64px; height: 64px; color: #666; margin-bottom: 12px; }
+        .upload-area p { color: #ccc; }
+        .upload-area .hint { font-size: 13px; color: #666; margin-top: 4px; }
+
+        .upload-preview img {
+            width: 100%;
+            max-height: 160px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .upload-preview .file-name { color: #4ade80; font-weight: 500; }
+        .upload-preview .file-size { font-size: 13px; color: #888; margin-top: 4px; }
+
+        .form-input {
+            width: 100%;
+            background: #121212;
+            border: 1px solid #303030;
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 12px;
+        }
+
+        .form-input:focus { border-color: #3b82f6; }
+        .form-input::placeholder { color: #666; }
+
+        textarea.form-input { resize: none; height: 80px; }
+
+        .submit-btn {
+            width: 100%;
+            background: #dc2626;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover { background: #b91c1c; }
+        .submit-btn:disabled { background: #555; cursor: not-allowed; }
+
+        .upload-progress {
+            text-align: center;
+            padding: 32px 0;
+        }
+
+        .upload-progress .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #dc2626;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #303030;
+            border-radius: 4px;
+            margin-top: 16px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #dc2626;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        /* Video Player Page */
+        .player-page { display: none; }
+        .player-page.active { display: block; }
+        .home-page.hidden { display: none; }
+
+        .player-container {
+            display: flex;
+            gap: 24px;
+        }
+
+        .player-main { flex: 1; min-width: 0; }
+
+        .player-wrapper {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .player-wrapper video {
+            width: 100%;
+            height: 100%;
+        }
+
+        .player-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 40px 12px 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .player-wrapper:hover .player-controls { opacity: 1; }
+
+        .progress-slider {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #dc2626;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .control-btn:hover { opacity: 0.8; }
+
+        .time-display { font-size: 12px; color: #ddd; }
+
+        .volume-slider {
+            width: 60px;
+            height: 3px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255,255,255,0.5);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .player-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 16px;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .player-channel {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .player-channel .channel-avatar { width: 40px; height: 40px; }
+
+        .player-desc {
+            background: #272727;
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .player-desc .stats {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 4px;
+        }
+
+        .player-desc .description {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .player-desc .size-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #aaa;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .back-btn:hover { color: white; }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #272727;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .action-btn:hover { background: #303030; }
+
+        /* Sidebar videos */
+        .player-sidebar {
+            width: 380px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-video-list {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-video-item {
+            display: flex;
+            gap: 8px;
+            padding: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-video-item:hover { background: #272727; }
+
+        .sidebar-thumb {
+            width: 160px;
+            aspect-ratio: 16/9;
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .sidebar-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .sidebar-thumb .duration-badge {
+            font-size: 10px;
+            padding: 1px 4px;
+        }
+
+        .sidebar-video-info { flex: 1; min-width: 0; }
+
+        .sidebar-video-info h4 {
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .sidebar-video-info p {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .player-container { flex-direction: column; }
+            .player-sidebar { width: 100%; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .main { margin-left: 0; }
+            .header-center { display: none; }
+            .upload-btn span { display: none; }
+            .video-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="menu-btn" onclick="toggleSidebar()">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                </svg>
+            </button>
+            <a class="logo" onclick="goHome()">
+                <div class="logo-icon">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                        <path d="M10 8l6 4-6 4V8z"/>
+                    </svg>
+                </div>
+                <span class="logo-text">MyTube</span>
+            </a>
+        </div>
+
+        <div class="header-center">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Tìm kiếm video..." oninput="filterVideos()">
+                <button class="search-btn">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <button class="upload-btn" onclick="showUploadModal()">
+            <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                <path d="M14 13h-3v3H9v-3H6v-2h3V8h2v3h3v2zm3-6v12H3V7h14zm1-1H2v14h16V6zM21 3v14h-1V4H4V3h17z"/>
+            </svg>
+            <span>Tải lên</span>
+        </button>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <button class="sidebar-item active" onclick="goHome()">
+            <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+            Trang chủ
+        </button>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-title">Thư viện</div>
+
+        <button class="sidebar-item">
+            <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                <path d="M11 7l6 3.5L11 14V7zm7-4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H6V5h12v12z"/>
+            </svg>
+            Tất cả video
+            <span style="margin-left:auto;font-size:12px;color:#888" id="videoCount">0</span>
+        </button>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-title">Thống kê</div>
+        <div class="sidebar-stats" id="statsInfo">
+            <div>Tổng video: 0</div>
+            <div>Dung lượng: 0 KB</div>
+        </div>
+    </aside>
+
+    <!-- Home Page -->
+    <main class="main" id="mainContent">
+        <div class="home-page" id="homePage">
+            <div class="video-grid" id="videoGrid"></div>
+            <div class="empty-state" id="emptyState" style="display:none">
+                <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
+                </svg>
+                <h3>Chưa có video nào</h3>
+                <p>Nhấn nút "Tải lên" để thêm video đầu tiên</p>
+            </div>
+        </div>
+
+        <!-- Player Page -->
+        <div class="player-page" id="playerPage">
+            <button class="back-btn" onclick="goHome()">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                Quay lại trang chủ
+            </button>
+
+            <div class="player-container">
+                <div class="player-main">
+                    <div class="player-wrapper" id="playerWrapper">
+                        <video id="mainVideo" onclick="togglePlay()"></video>
+                        <div class="player-controls" id="playerControls">
+                            <input type="range" class="progress-slider" id="progressSlider" min="0" max="100" value="0" oninput="seekVideo(this.value)">
+                            <div class="controls-row">
+                                <button class="control-btn" onclick="togglePlay()">
+                                    <svg id="playPauseIcon" width="28" height="28" fill="white" viewBox="0 0 24 24">
+                                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                    </svg>
+                                </button>
+                                <button class="control-btn" onclick="toggleMute()">
+                                    <svg id="volumeIcon" width="20" height="20" fill="white" viewBox="0 0 24 24">
+                                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                                    </svg>
+                                </button>
+                                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1" oninput="changeVolume(this.value)">
+                                <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+                                <div style="flex:1"></div>
+                                <button class="control-btn" onclick="toggleFullscreen()">
+                                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h1 class="player-title" id="playerTitle"></h1>
+                    <div class="player-info">
+                        <div class="player-channel">
+                            <div class="channel-avatar" id="playerAvatar"></div>
+                            <div>
+                                <div style="font-weight:500;font-size:14px">MyTube</div>
+                                <div style="font-size:12px;color:#aaa" id="playerViews"></div>
+                            </div>
+                        </div>
+                        <button class="action-btn" onclick="deleteCurrentVideo()">
+                            <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                            Xóa
+                        </button>
+                    </div>
+                    <div class="player-desc">
+                        <div class="stats" id="playerStats"></div>
+                        <div class="description" id="playerDescription"></div>
+                        <div class="size-info" id="playerSize"></div>
+                    </div>
+                </div>
+
+                <div class="player-sidebar">
+                    <h3 style="font-weight:500;margin-bottom:12px">Video đã lưu</h3>
+                    <div class="sidebar-video-list" id="sidebarVideoList"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Upload Modal -->
+    <div class="modal-overlay hidden" id="uploadModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Tải lên video</h2>
+                <button class="modal-close" onclick="hideUploadModal()">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="uploadForm">
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div id="uploadPlaceholder">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
+                        </svg>
+                        <p>Nhấn để chọn video</p>
+                        <p class="hint">MP4, WebM, OGG, MOV</p>
+                    </div>
+                    <div class="upload-preview" id="uploadPreview" style="display:none">
+                        <img id="previewImg" src="" alt="">
+                        <p class="file-name" id="fileName"></p>
+                        <p class="file-size" id="fileSize"></p>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept="video/*" style="display:none" onchange="handleFileSelect(event)">
+
+                <input type="text" class="form-input" id="videoTitle" placeholder="Tiêu đề video">
+                <textarea class="form-input" id="videoDesc" placeholder="Mô tả (tùy chọn)"></textarea>
+                <button class="submit-btn" id="submitBtn" onclick="handleUpload()" disabled>Tải lên</button>
+            </div>
+
+            <div id="uploadProgress" style="display:none">
+                <div class="upload-progress">
+                    <div class="spinner"></div>
+                    <p id="progressText">Đang tải lên...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ IndexedDB ============
+        const DB_NAME = 'mytube_db';
+        const STORE_NAME = 'videos';
+        let db;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = () => {
+                    if (!req.result.objectStoreNames.contains(STORE_NAME)) {
+                        req.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = () => { db = req.result; resolve(db); };
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dbPut(record) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).put(record);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        function dbGetAll() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dbGet(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).get(id);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dbDelete(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        // ============ State ============
+        let allVideos = [];
+        let currentVideoId = null;
+        let selectedFile = null;
+        let thumbnailData = '';
+        let objectUrls = [];
+
+        // ============ Utils ============
+        function genId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function formatDuration(sec) {
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            const s = Math.floor(sec % 60);
+            if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            return `${m}:${String(s).padStart(2,'0')}`;
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+            if (bytes < 1024*1024*1024) return (bytes/(1024*1024)).toFixed(1) + ' MB';
+            return (bytes/(1024*1024*1024)).toFixed(2) + ' GB';
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / 86400000);
+            if (days === 0) return 'Hôm nay';
+            if (days === 1) return 'Hôm qua';
+            if (days < 7) return days + ' ngày trước';
+            if (days < 30) return Math.floor(days/7) + ' tuần trước';
+            if (days < 365) return Math.floor(days/30) + ' tháng trước';
+            return Math.floor(days/365) + ' năm trước';
+        }
+
+        function formatViews(v) {
+            if (v < 1000) return v.toString();
+            if (v < 1000000) return (v/1000).toFixed(1) + 'K';
+            return (v/1000000).toFixed(1) + 'M';
+        }
+
+        function getVideoUrl(video) {
+            if (video._url) return video._url;
+            video._url = URL.createObjectURL(video.blob);
+            objectUrls.push(video._url);
+            return video._url;
+        }
+
+        // ============ Load Videos ============
+        async function loadVideos() {
+            allVideos = await dbGetAll();
+            allVideos.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+            renderVideoGrid();
+            updateStats();
+        }
+
+        function updateStats() {
+            const totalSize = allVideos.reduce((a, v) => a + v.size, 0);
+            document.getElementById('videoCount').textContent = allVideos.length;
+            document.getElementById('statsInfo').innerHTML = `
+                <div>Tổng video: ${allVideos.length}</div>
+                <div>Dung lượng: ${formatSize(totalSize)}</div>
+            `;
+        }
+
+        // ============ Render ============
+        function renderVideoGrid() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allVideos.filter(v => v.title.toLowerCase().includes(query));
+            const grid = document.getElementById('videoGrid');
+            const empty = document.getElementById('emptyState');
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'flex';
+                return;
+            }
+
+            empty.style.display = 'none';
+            grid.innerHTML = filtered.map(v => `
+                <div class="video-card" onmouseenter="hoverVideo(this, '${v.id}')" onmouseleave="unhoverVideo(this)">
+                    <div class="thumbnail-container">
+                        ${v.thumbnail ? `<img class="thumbnail-img" src="${v.thumbnail}" alt="${v.title}">` : `
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a1a,#2a2a2a)">
+                                <svg width="48" height="48" fill="#555" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+                            </div>
+                        `}
+                        <video class="hover-video" muted playsinline src="${getVideoUrl(v)}"></video>
+                        <div class="duration-badge">${formatDuration(v.duration)}</div>
+                        <div class="play-overlay">
+                            <div class="play-circle">
+                                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="video-info">
+                        <div class="channel-avatar">${v.title.charAt(0).toUpperCase()}</div>
+                        <div class="video-meta">
+                            <div class="video-title">${v.title}</div>
+                            <div class="video-channel">MyTube</div>
+                            <div class="video-stats">${formatViews(v.views)} lượt xem • ${formatDate(v.uploadDate)}</div>
+                        </div>
+                        <button class="delete-btn" onclick="event.stopPropagation();deleteVideo('${v.id}')">
+                            <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            grid.querySelectorAll('.video-card').forEach((card, i) => {
+                card.addEventListener('click', () => playVideo(filtered[i].id));
+            });
+        }
+
+        function hoverVideo(card, id) {
+            const video = card.querySelector('.hover-video');
+            if (video) {
+                video.currentTime = 0;
+                video.play().catch(() => {});
+            }
+        }
+
+        function unhoverVideo(card) {
+            const video = card.querySelector('.hover-video');
+            if (video) video.pause();
+        }
+
+        // ============ Play Video ============
+        async function playVideo(id) {
+            const video = await dbGet(id);
+            if (!video) return;
+
+            video.views = (video.views || 0) + 1;
+            await dbPut(video);
+            currentVideoId = id;
+
+            // Update in memory
+            const idx = allVideos.findIndex(v => v.id === id);
+            if (idx >= 0) allVideos[idx] = video;
+
+            // Show player
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('playerPage').classList.add('active');
+
+            // Set video source
+            const mainVideo = document.getElementById('mainVideo');
+            mainVideo.src = getVideoUrl(video);
+            mainVideo.play();
+
+            // Update info
+            document.getElementById('playerTitle').textContent = video.title;
+            document.getElementById('playerAvatar').textContent = video.title.charAt(0).toUpperCase();
+            document.getElementById('playerViews').textContent = formatViews(video.views) + ' lượt xem';
+            document.getElementById('playerStats').textContent = `${formatViews(video.views)} lượt xem • ${formatDate(video.uploadDate)}`;
+            document.getElementById('playerDescription').textContent = video.description || 'Không có mô tả';
+            document.getElementById('playerSize').textContent = 'Kích thước: ' + formatSize(video.size);
+
+            // Sidebar videos
+            renderSidebarVideos(id);
+
+            // Setup controls
+            setupPlayerControls(mainVideo);
+        }
+
+        function renderSidebarVideos(currentId) {
+            const others = allVideos.filter(v => v.id !== currentId);
+            const list = document.getElementById('sidebarVideoList');
+
+            if (others.length === 0) {
+                list.innerHTML = '<p style="color:#888;font-size:13px">Không có video khác</p>';
+                return;
+            }
+
+            list.innerHTML = others.map(v => `
+                <div class="sidebar-video-item" onclick="playVideo('${v.id}')">
+                    <div class="sidebar-thumb">
+                        ${v.thumbnail ? `<img src="${v.thumbnail}" alt="">` : `
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center">
+                                <svg width="32" height="32" fill="#555" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+                            </div>
+                        `}
+                        <div class="duration-badge">${formatDuration(v.duration)}</div>
+                    </div>
+                    <div class="sidebar-video-info">
+                        <h4>${v.title}</h4>
+                        <p>MyTube</p>
+                        <p>${formatViews(v.views)} lượt xem</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setupPlayerControls(video) {
+            const slider = document.getElementById('progressSlider');
+            const timeDisplay = document.getElementById('timeDisplay');
+
+            video.ontimeupdate = () => {
+                if (video.duration) {
+                    slider.value = (video.currentTime / video.duration) * 100;
+                    slider.style.background = `linear-gradient(to right, #dc2626 ${(video.currentTime/video.duration)*100}%, rgba(255,255,255,0.3) ${(video.currentTime/video.duration)*100}%)`;
+                    timeDisplay.textContent = `${formatDuration(video.currentTime)} / ${formatDuration(video.duration)}`;
+                }
+            };
+
+            video.onplay = () => {
+                document.getElementById('playPauseIcon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            };
+
+            video.onpause = () => {
+                document.getElementById('playPauseIcon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            };
+        }
+
+        // ============ Player Controls ============
+        function togglePlay() {
+            const video = document.getElementById('mainVideo');
+            if (video.paused) video.play();
+            else video.pause();
+        }
+
+        function seekVideo(val) {
+            const video = document.getElementById('mainVideo');
+            if (video.duration) {
+                video.currentTime = (val / 100) * video.duration;
+            }
+        }
+
+        function changeVolume(val) {
+            const video = document.getElementById('mainVideo');
+            video.volume = val;
+            video.muted = val == 0;
+        }
+
+        function toggleMute() {
+            const video = document.getElementById('mainVideo');
+            video.muted = !video.muted;
+            document.getElementById('volumeSlider').value = video.muted ? 0 : video.volume;
+        }
+
+        function toggleFullscreen() {
+            const wrapper = document.getElementById('playerWrapper');
+            if (document.fullscreenElement) document.exitFullscreen();
+            else wrapper.requestFullscreen();
+        }
+
+        // ============ Upload ============
+        function showUploadModal() {
+            document.getElementById('uploadModal').classList.remove('hidden');
+            resetUploadForm();
+        }
+
+        function hideUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+            resetUploadForm();
+        }
+
+        function resetUploadForm() {
+            selectedFile = null;
+            thumbnailData = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('videoTitle').value = '';
+            document.getElementById('videoDesc').value = '';
+            document.getElementById('uploadPlaceholder').style.display = '';
+            document.getElementById('uploadPreview').style.display = 'none';
+            document.getElementById('uploadForm').style.display = '';
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            selectedFile = file;
+
+            document.getElementById('uploadPlaceholder').style.display = 'none';
+            document.getElementById('uploadPreview').style.display = '';
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatSize(file.size);
+            document.getElementById('videoTitle').value = file.name.replace(/\.[^/.]+$/, '');
+            document.getElementById('submitBtn').disabled = false;
+
+            // Generate thumbnail
+            generateThumbnail(file).then(thumb => {
+                thumbnailData = thumb;
+                if (thumb) {
+                    document.getElementById('previewImg').src = thumb;
+                }
+            });
+        }
+
+        function generateThumbnail(file) {
+            return new Promise(resolve => {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                video.muted = true;
+                video.playsInline = true;
+                const url = URL.createObjectURL(file);
+                video.src = url;
+
+                video.onloadeddata = () => {
+                    video.currentTime = Math.min(1, video.duration / 4);
+                };
+
+                video.onseeked = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 320;
+                    canvas.height = 180;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, 320, 180);
+                    URL.revokeObjectURL(url);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+
+                video.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve('');
+                };
+
+                setTimeout(() => resolve(''), 5000);
+            });
+        }
+
+        async function handleUpload() {
+            if (!selectedFile) return;
+
+            document.getElementById('uploadForm').style.display = 'none';
+            document.getElementById('uploadProgress').style.display = '';
+
+            updateProgress(20, 'Đang xử lý video...');
+
+            const duration = await getDuration(selectedFile);
+            updateProgress(50, 'Đang tạo thumbnail...');
+
+            const record = {
+                id: genId(),
+                title: document.getElementById('videoTitle').value || selectedFile.name,
+                description: document.getElementById('videoDesc').value,
+                blob: selectedFile,
+                thumbnail: thumbnailData,
+                duration: duration,
+                size: selectedFile.size,
+                uploadDate: new Date().toISOString(),
+                views: 0
+            };
+
+            updateProgress(75, 'Đang lưu vào database...');
+            await dbPut(record);
+            updateProgress(100, 'Hoàn tất!');
+
+            setTimeout(() => {
+                hideUploadModal();
+                loadVideos();
+            }, 800);
+        }
+
+        function getDuration(file) {
+            return new Promise(resolve => {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                video.onloadedmetadata = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(video.duration);
+                };
+                video.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(0);
+                };
+            });
+        }
+
+        function updateProgress(pct, text) {
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressText').textContent = text + ' ' + pct + '%';
+        }
+
+        // ============ Delete ============
+        async function deleteVideo(id) {
+            if (!confirm('Bạn có chắc muốn xóa video này?')) return;
+            await dbDelete(id);
+            if (currentVideoId === id) goHome();
+            loadVideos();
+        }
+
+        async function deleteCurrentVideo() {
+            if (!currentVideoId) return;
+            if (!confirm('Bạn có chắc muốn xóa video này?')) return;
+            await dbDelete(currentVideoId);
+            goHome();
+            loadVideos();
+        }
+
+        // ============ Navigation ============
+        function goHome() {
+            currentVideoId = null;
+            document.getElementById('homePage').classList.remove('hidden');
+            document.getElementById('playerPage').classList.remove('active');
+            const video = document.getElementById('mainVideo');
+            video.pause();
+            video.src = '';
+            loadVideos();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const main = document.getElementById('mainContent');
+            sidebar.classList.toggle('hidden');
+            main.classList.toggle('expanded');
+        }
+
+        function filterVideos() {
+            renderVideoGrid();
+        }
+
+        // ============ Init ============
+        async function init() {
+            await openDB();
+            await loadVideos();
+        }
+
+        init();
+    </script>
+</body>
+</html>
+
+
++++ public/mytube.html (修改后)
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTube - Lưu trữ & Xem Video</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Ứng dụng lưu trữ và xem video trực tiếp trong trình duyệt">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MyTube">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="MyTube">
+    <meta name="msapplication-TileColor" content="#dc2626">
+
+    <!-- Favicon SVG -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230f0f0f'/%3E%3Cpolygon points='200,140 200,372 380,256' fill='%23dc2626'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230f0f0f'/%3E%3Cpolygon points='200,140 200,372 380,256' fill='%23dc2626'/%3E%3C/svg%3E">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #404040; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* ===== HEADER ===== */
+        .header {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 56px; background: #0f0f0f;
+            display: flex; align-items: center; padding: 0 16px;
+            z-index: 100; border-bottom: 1px solid #272727;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .menu-btn {
+            background: none; border: none; color: white; cursor: pointer;
+            padding: 8px; border-radius: 50%; display: flex; align-items: center;
+        }
+        .menu-btn:hover { background: #272727; }
+        .logo { display: flex; align-items: center; gap: 4px; cursor: pointer; text-decoration: none; color: white; }
+        .logo-icon { background: #dc2626; border-radius: 6px; padding: 4px 6px; display: flex; align-items: center; }
+        .logo-text { font-size: 20px; font-weight: bold; letter-spacing: -0.5px; }
+        .header-center { flex: 1; display: flex; justify-content: center; padding: 0 20px; }
+        .search-box { display: flex; max-width: 600px; width: 100%; }
+        .search-box input {
+            flex: 1; background: #121212; border: 1px solid #303030;
+            border-right: none; border-radius: 20px 0 0 20px;
+            padding: 8px 16px; color: white; font-size: 14px; outline: none;
+        }
+        .search-box input:focus { border-color: #1c62b9; }
+        .search-box input::placeholder { color: #888; }
+        .search-btn {
+            background: #222; border: 1px solid #303030;
+            border-radius: 0 20px 20px 0; padding: 8px 20px;
+            cursor: pointer; color: white; display: flex; align-items: center;
+        }
+        .search-btn:hover { background: #303030; }
+        .upload-btn {
+            display: flex; align-items: center; gap: 8px;
+            background: #272727; border: none; color: white;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer;
+            font-size: 14px; font-weight: 500; margin-left: 16px;
+            transition: background 0.2s;
+        }
+        .upload-btn:hover { background: #303030; }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed; left: 0; top: 56px; bottom: 0;
+            width: 240px; background: #0f0f0f; overflow-y: auto;
+            padding: 12px; z-index: 90; transition: transform 0.2s;
+        }
+        .sidebar.hidden { transform: translateX(-100%); }
+        .sidebar-item {
+            display: flex; align-items: center; gap: 20px;
+            padding: 10px 12px; border-radius: 10px; cursor: pointer;
+            color: white; font-size: 14px; border: none; background: none;
+            width: 100%; text-align: left; transition: background 0.15s;
+        }
+        .sidebar-item:hover { background: #272727; }
+        .sidebar-item.active { background: #272727; }
+        .sidebar-divider { border-top: 1px solid #272727; margin: 12px 0; }
+        .sidebar-title { padding: 8px 12px; font-size: 13px; color: #aaa; font-weight: 500; }
+        .sidebar-stats { padding: 4px 12px; font-size: 12px; color: #888; line-height: 1.8; }
+
+        /* ===== MAIN ===== */
+        .main { margin-top: 56px; margin-left: 240px; padding: 24px; transition: margin-left 0.2s; }
+        .main.expanded { margin-left: 0; }
+
+        /* ===== VIDEO GRID ===== */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .video-card { cursor: pointer; border-radius: 12px; }
+        .video-card:hover .video-title { color: #fff; }
+        .thumbnail-container {
+            position: relative; aspect-ratio: 16/9;
+            background: #1a1a1a; border-radius: 12px; overflow: hidden;
+        }
+        .thumbnail-container img, .thumbnail-container video { width: 100%; height: 100%; object-fit: cover; }
+        .thumbnail-container .hover-video { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; }
+        .video-card:hover .hover-video { opacity: 1; }
+        .video-card:hover .thumbnail-img { opacity: 0; }
+        .duration-badge {
+            position: absolute; bottom: 8px; right: 8px;
+            background: rgba(0,0,0,0.8); padding: 2px 6px;
+            border-radius: 4px; font-size: 12px; font-weight: 500;
+        }
+        .play-overlay {
+            position: absolute; inset: 0; display: flex;
+            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.2s;
+        }
+        .video-card:hover .play-overlay { opacity: 1; }
+        .play-circle {
+            width: 48px; height: 48px; background: rgba(0,0,0,0.6);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        }
+        .video-info { display: flex; gap: 12px; margin-top: 12px; }
+        .channel-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px; flex-shrink: 0;
+        }
+        .video-meta { flex: 1; min-width: 0; }
+        .video-title {
+            font-size: 14px; font-weight: 500; line-height: 1.4;
+            display: -webkit-box; -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden; color: #e0e0e0;
+        }
+        .video-channel { font-size: 12px; color: #aaa; margin-top: 4px; }
+        .video-stats { font-size: 12px; color: #aaa; }
+        .delete-btn {
+            opacity: 0; background: none; border: none; color: white;
+            cursor: pointer; padding: 4px; border-radius: 50%; align-self: flex-start;
+            transition: opacity 0.2s;
+        }
+        .video-card:hover .delete-btn { opacity: 1; }
+        .delete-btn:hover { background: #303030; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 400px; color: #888;
+        }
+        .empty-state svg { width: 100px; height: 100px; opacity: 0.3; margin-bottom: 16px; }
+        .empty-state h3 { font-size: 20px; margin-bottom: 8px; color: #aaa; }
+        .empty-state p { font-size: 14px; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200; padding: 16px;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal { background: #212121; border-radius: 16px; width: 100%; max-width: 500px; padding: 24px; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .modal-header h2 { font-size: 20px; font-weight: bold; }
+        .modal-close { background: none; border: none; color: white; cursor: pointer; padding: 8px; border-radius: 50%; }
+        .modal-close:hover { background: #303030; }
+        .upload-area {
+            border: 2px dashed #404040; border-radius: 12px; padding: 32px;
+            text-align: center; cursor: pointer; margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        .upload-area:hover { border-color: #dc2626; }
+        .upload-area svg { width: 64px; height: 64px; color: #666; margin-bottom: 12px; }
+        .upload-area p { color: #ccc; }
+        .upload-area .hint { font-size: 13px; color: #666; margin-top: 4px; }
+        .upload-preview img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+        .upload-preview .file-name { color: #4ade80; font-weight: 500; }
+        .upload-preview .file-size { font-size: 13px; color: #888; margin-top: 4px; }
+        .form-input {
+            width: 100%; background: #121212; border: 1px solid #303030;
+            border-radius: 8px; padding: 10px 16px; color: white;
+            font-size: 14px; outline: none; margin-bottom: 12px;
+        }
+        .form-input:focus { border-color: #3b82f6; }
+        .form-input::placeholder { color: #666; }
+        textarea.form-input { resize: none; height: 80px; }
+        .submit-btn {
+            width: 100%; background: #dc2626; border: none; color: white;
+            padding: 12px; border-radius: 20px; font-size: 15px;
+            font-weight: 500; cursor: pointer; transition: background 0.2s;
+        }
+        .submit-btn:hover { background: #b91c1c; }
+        .submit-btn:disabled { background: #555; cursor: not-allowed; }
+        .upload-progress { text-align: center; padding: 32px 0; }
+        .upload-progress .spinner {
+            width: 48px; height: 48px; border: 4px solid #dc2626;
+            border-top-color: transparent; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-bar { width: 100%; height: 8px; background: #303030; border-radius: 4px; margin-top: 16px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #dc2626; border-radius: 4px; transition: width 0.3s; }
+
+        /* ===== PLAYER PAGE ===== */
+        .player-page { display: none; }
+        .player-page.active { display: block; }
+        .home-page.hidden { display: none; }
+        .player-container { display: flex; gap: 24px; }
+        .player-main { flex: 1; min-width: 0; }
+        .player-wrapper { position: relative; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
+        .player-wrapper video { width: 100%; height: 100%; }
+        .player-controls {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 40px 12px 12px; opacity: 0; transition: opacity 0.3s;
+        }
+        .player-wrapper:hover .player-controls { opacity: 1; }
+        .progress-slider {
+            width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+            background: rgba(255,255,255,0.3); border-radius: 2px;
+            outline: none; cursor: pointer; margin-bottom: 8px;
+        }
+        .progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 14px; height: 14px;
+            background: #dc2626; border-radius: 50%; cursor: pointer;
+        }
+        .controls-row { display: flex; align-items: center; gap: 12px; }
+        .control-btn { background: none; border: none; color: white; cursor: pointer; padding: 4px; display: flex; align-items: center; }
+        .control-btn:hover { opacity: 0.8; }
+        .time-display { font-size: 12px; color: #ddd; }
+        .volume-slider {
+            width: 60px; height: 3px; -webkit-appearance: none; appearance: none;
+            background: rgba(255,255,255,0.5); border-radius: 2px;
+            outline: none; cursor: pointer;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 10px; height: 10px;
+            background: white; border-radius: 50%;
+        }
+        .player-title { font-size: 20px; font-weight: bold; margin-top: 16px; }
+        .player-info { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
+        .player-channel { display: flex; align-items: center; gap: 12px; }
+        .player-channel .channel-avatar { width: 40px; height: 40px; }
+        .player-desc { background: #272727; border-radius: 12px; padding: 12px; margin-top: 16px; }
+        .player-desc .stats { font-size: 13px; color: #ccc; margin-bottom: 4px; }
+        .player-desc .description { font-size: 14px; color: #ccc; }
+        .player-desc .size-info { font-size: 12px; color: #666; margin-top: 8px; }
+        .back-btn {
+            display: flex; align-items: center; gap: 8px;
+            color: #aaa; background: none; border: none;
+            cursor: pointer; font-size: 14px; margin-bottom: 16px;
+        }
+        .back-btn:hover { color: white; }
+        .action-btn {
+            display: flex; align-items: center; gap: 8px;
+            background: #272727; border: none; color: white;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px;
+        }
+        .action-btn:hover { background: #303030; }
+        .player-sidebar { width: 380px; flex-shrink: 0; }
+        .sidebar-video-list { max-height: 70vh; overflow-y: auto; }
+        .sidebar-video-item {
+            display: flex; gap: 8px; padding: 4px;
+            border-radius: 8px; cursor: pointer; margin-bottom: 8px;
+        }
+        .sidebar-video-item:hover { background: #272727; }
+        .sidebar-thumb {
+            width: 160px; aspect-ratio: 16/9; background: #1a1a1a;
+            border-radius: 8px; overflow: hidden; flex-shrink: 0; position: relative;
+        }
+        .sidebar-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .sidebar-thumb .duration-badge { font-size: 10px; padding: 1px 4px; }
+        .sidebar-video-info { flex: 1; min-width: 0; }
+        .sidebar-video-info h4 {
+            font-size: 13px; font-weight: 500; line-height: 1.3;
+            display: -webkit-box; -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .sidebar-video-info p { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+        /* ===== PWA INSTALL BUTTON ===== */
+        .pwa-install-btn {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #dc2626; color: white; border: none;
+            padding: 12px 20px; border-radius: 24px; cursor: pointer;
+            font-size: 14px; font-weight: 500; display: none;
+            align-items: center; gap: 8px;
+            box-shadow: 0 4px 12px rgba(220,38,38,0.4);
+            z-index: 9999; transition: all 0.2s;
+            animation: slideUp 0.3s ease-out;
+        }
+        .pwa-install-btn:hover {
+            background: #b91c1c; transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(220,38,38,0.5);
+        }
+        .pwa-install-btn.show { display: flex; }
+        @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: #323232; color: white; padding: 12px 24px;
+            border-radius: 8px; z-index: 9999; font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease-out;
+            display: none;
+        }
+        .toast.show { display: block; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .player-container { flex-direction: column; }
+            .player-sidebar { width: 100%; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .main { margin-left: 0 !important; }
+            .header-center { display: none; }
+            .upload-btn span { display: none; }
+            .video-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="menu-btn" onclick="toggleSidebar()">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+            <a class="logo" onclick="goHome()">
+                <div class="logo-icon">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M10 8l6 4-6 4V8z"/></svg>
+                </div>
+                <span class="logo-text">MyTube</span>
+            </a>
+        </div>
+        <div class="header-center">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Tìm kiếm video..." oninput="filterVideos()">
+                <button class="search-btn">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                </button>
+            </div>
+        </div>
+        <button class="upload-btn" onclick="showUploadModal()">
+            <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M14 13h-3v3H9v-3H6v-2h3V8h2v3h3v2zm3-6v12H3V7h14zm1-1H2v14h16V6zM21 3v14h-1V4H4V3h17z"/></svg>
+            <span>Tải lên</span>
+        </button>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <button class="sidebar-item active" onclick="goHome()">
+            <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            Trang chủ
+        </button>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-title">Thư viện</div>
+        <button class="sidebar-item">
+            <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M11 7l6 3.5L11 14V7zm7-4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H6V5h12v12z"/></svg>
+            Tất cả video
+            <span style="margin-left:auto;font-size:12px;color:#888" id="videoCount">0</span>
+        </button>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-title">Thống kê</div>
+        <div class="sidebar-stats" id="statsInfo">
+            <div>Tổng video: 0</div>
+            <div>Dung lượng: 0 KB</div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main" id="mainContent">
+        <!-- Home Page -->
+        <div class="home-page" id="homePage">
+            <div class="video-grid" id="videoGrid"></div>
+            <div class="empty-state" id="emptyState" style="display:none">
+                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+                <h3>Chưa có video nào</h3>
+                <p>Nhấn nút "Tải lên" để thêm video đầu tiên</p>
+            </div>
+        </div>
+
+        <!-- Player Page -->
+        <div class="player-page" id="playerPage">
+            <button class="back-btn" onclick="goHome()">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                Quay lại trang chủ
+            </button>
+            <div class="player-container">
+                <div class="player-main">
+                    <div class="player-wrapper" id="playerWrapper">
+                        <video id="mainVideo" onclick="togglePlay()"></video>
+                        <div class="player-controls" id="playerControls">
+                            <input type="range" class="progress-slider" id="progressSlider" min="0" max="100" value="0" oninput="seekVideo(this.value)">
+                            <div class="controls-row">
+                                <button class="control-btn" onclick="togglePlay()">
+                                    <svg id="playPauseIcon" width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                </button>
+                                <button class="control-btn" onclick="toggleMute()">
+                                    <svg id="volumeIcon" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                                </button>
+                                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1" oninput="changeVolume(this.value)">
+                                <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+                                <div style="flex:1"></div>
+                                <button class="control-btn" onclick="toggleFullscreen()">
+                                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <h1 class="player-title" id="playerTitle"></h1>
+                    <div class="player-info">
+                        <div class="player-channel">
+                            <div class="channel-avatar" id="playerAvatar"></div>
+                            <div>
+                                <div style="font-weight:500;font-size:14px">MyTube</div>
+                                <div style="font-size:12px;color:#aaa" id="playerViews"></div>
+                            </div>
+                        </div>
+                        <button class="action-btn" onclick="deleteCurrentVideo()">
+                            <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            Xóa
+                        </button>
+                    </div>
+                    <div class="player-desc">
+                        <div class="stats" id="playerStats"></div>
+                        <div class="description" id="playerDescription"></div>
+                        <div class="size-info" id="playerSize"></div>
+                    </div>
+                </div>
+                <div class="player-sidebar">
+                    <h3 style="font-weight:500;margin-bottom:12px">Video đã lưu</h3>
+                    <div class="sidebar-video-list" id="sidebarVideoList"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Upload Modal -->
+    <div class="modal-overlay hidden" id="uploadModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Tải lên video</h2>
+                <button class="modal-close" onclick="hideUploadModal()">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div id="uploadForm">
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div id="uploadPlaceholder">
+                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                        <p>Nhấn để chọn video</p>
+                        <p class="hint">MP4, WebM, OGG, MOV</p>
+                    </div>
+                    <div class="upload-preview" id="uploadPreview" style="display:none">
+                        <img id="previewImg" src="" alt="">
+                        <p class="file-name" id="fileName"></p>
+                        <p class="file-size" id="fileSize"></p>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept="video/*" style="display:none" onchange="handleFileSelect(event)">
+                <input type="text" class="form-input" id="videoTitle" placeholder="Tiêu đề video">
+                <textarea class="form-input" id="videoDesc" placeholder="Mô tả (tùy chọn)"></textarea>
+                <button class="submit-btn" id="submitBtn" onclick="handleUpload()" disabled>Tải lên</button>
+            </div>
+            <div id="uploadProgress" style="display:none">
+                <div class="upload-progress">
+                    <div class="spinner"></div>
+                    <p id="progressText">Đang tải lên...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Install Button -->
+    <button class="pwa-install-btn" id="pwaInstallBtn" onclick="installApp()">
+        <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        <span>Cài đặt App</span>
+    </button>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // ===========================
+    // IndexedDB
+    // ===========================
+    const DB_NAME = 'mytube_db';
+    const STORE_NAME = 'videos';
+    let db;
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = () => {
+                if (!req.result.objectStoreNames.contains(STORE_NAME))
+                    req.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            };
+            req.onsuccess = () => { db = req.result; resolve(db); };
+            req.onerror = () => reject(req.error);
+        });
+    }
+    function dbPut(r) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME,'readwrite'); tx.objectStore(STORE_NAME).put(r); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+    function dbGetAll() { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME,'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+    function dbGet(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME,'readonly'); const r = tx.objectStore(STORE_NAME).get(id); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+    function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME,'readwrite'); tx.objectStore(STORE_NAME).delete(id); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+
+    // ===========================
+    // State
+    // ===========================
+    let allVideos = [];
+    let currentVideoId = null;
+    let selectedFile = null;
+    let thumbnailData = '';
+    let objectUrls = [];
+    let deferredPrompt = null;
+
+    // ===========================
+    // Utils
+    // ===========================
+    function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+    function formatDuration(s) { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60); return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`; }
+    function formatSize(b) { if(b<1048576) return (b/1024).toFixed(1)+' KB'; if(b<1073741824) return (b/1048576).toFixed(1)+' MB'; return (b/1073741824).toFixed(2)+' GB'; }
+    function formatDate(d) { const days=Math.floor((Date.now()-new Date(d))/864e5); if(!days) return 'Hôm nay'; if(days===1) return 'Hôm qua'; if(days<7) return days+' ngày trước'; if(days<30) return Math.floor(days/7)+' tuần trước'; if(days<365) return Math.floor(days/30)+' tháng trước'; return Math.floor(days/365)+' năm trước'; }
+    function formatViews(v) { if(v<1e3) return v.toString(); if(v<1e6) return (v/1e3).toFixed(1)+'K'; return (v/1e6).toFixed(1)+'M'; }
+    function getVideoUrl(v) { if(v._url) return v._url; v._url=URL.createObjectURL(v.blob); objectUrls.push(v._url); return v._url; }
+    function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+
+    // ===========================
+    // Load & Render
+    // ===========================
+    async function loadVideos() {
+        allVideos = await dbGetAll();
+        allVideos.sort((a,b) => new Date(b.uploadDate)-new Date(a.uploadDate));
+        renderVideoGrid();
+        updateStats();
+    }
+    function updateStats() {
+        const total = allVideos.reduce((a,v)=>a+v.size,0);
+        document.getElementById('videoCount').textContent = allVideos.length;
+        document.getElementById('statsInfo').innerHTML = `<div>Tổng video: ${allVideos.length}</div><div>Dung lượng: ${formatSize(total)}</div>`;
+    }
+    function renderVideoGrid() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allVideos.filter(v => v.title.toLowerCase().includes(q));
+        const grid = document.getElementById('videoGrid');
+        const empty = document.getElementById('emptyState');
+        if (!filtered.length) { grid.innerHTML=''; empty.style.display='flex'; return; }
+        empty.style.display='none';
+        grid.innerHTML = filtered.map(v => `
+            <div class="video-card" data-id="${v.id}">
+                <div class="thumbnail-container">
+                    ${v.thumbnail ? `<img class="thumbnail-img" src="${v.thumbnail}" alt="">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a1a,#2a2a2a)"><svg width="48" height="48" fill="#555" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg></div>`}
+                    <video class="hover-video" muted playsinline src="${getVideoUrl(v)}"></video>
+                    <div class="duration-badge">${formatDuration(v.duration)}</div>
+                    <div class="play-overlay"><div class="play-circle"><svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
+                </div>
+                <div class="video-info">
+                    <div class="channel-avatar">${v.title.charAt(0).toUpperCase()}</div>
+                    <div class="video-meta">
+                        <div class="video-title">${v.title}</div>
+                        <div class="video-channel">MyTube</div>
+                        <div class="video-stats">${formatViews(v.views)} lượt xem • ${formatDate(v.uploadDate)}</div>
+                    </div>
+                    <button class="delete-btn" onclick="event.stopPropagation();deleteVideo('${v.id}')">
+                        <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        // Events
+        grid.querySelectorAll('.video-card').forEach(card => {
+            card.addEventListener('click', () => playVideo(card.dataset.id));
+            card.addEventListener('mouseenter', () => { const v=card.querySelector('.hover-video'); if(v){v.currentTime=0;v.play().catch(()=>{});} });
+            card.addEventListener('mouseleave', () => { const v=card.querySelector('.hover-video'); if(v) v.pause(); });
+        });
+    }
+    function filterVideos() { renderVideoGrid(); }
+
+    // ===========================
+    // Player
+    // ===========================
+    async function playVideo(id) {
+        const video = await dbGet(id);
+        if (!video) return;
+        video.views = (video.views||0)+1;
+        await dbPut(video);
+        currentVideoId = id;
+        const idx = allVideos.findIndex(v=>v.id===id);
+        if(idx>=0) allVideos[idx]=video;
+
+        document.getElementById('homePage').classList.add('hidden');
+        document.getElementById('playerPage').classList.add('active');
+
+        const mainVideo = document.getElementById('mainVideo');
+        mainVideo.src = getVideoUrl(video);
+        mainVideo.play();
+
+        document.getElementById('playerTitle').textContent = video.title;
+        document.getElementById('playerAvatar').textContent = video.title.charAt(0).toUpperCase();
+        document.getElementById('playerViews').textContent = formatViews(video.views)+' lượt xem';
+        document.getElementById('playerStats').textContent = `${formatViews(video.views)} lượt xem • ${formatDate(video.uploadDate)}`;
+        document.getElementById('playerDescription').textContent = video.description || 'Không có mô tả';
+        document.getElementById('playerSize').textContent = 'Kích thước: '+formatSize(video.size);
+
+        renderSidebarVideos(id);
+        setupPlayerControls(mainVideo);
+    }
+    function renderSidebarVideos(curId) {
+        const others = allVideos.filter(v=>v.id!==curId);
+        const list = document.getElementById('sidebarVideoList');
+        if(!others.length) { list.innerHTML='<p style="color:#888;font-size:13px">Không có video khác</p>'; return; }
+        list.innerHTML = others.map(v=>`
+            <div class="sidebar-video-item" onclick="playVideo('${v.id}')">
+                <div class="sidebar-thumb">
+                    ${v.thumbnail?`<img src="${v.thumbnail}" alt="">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><svg width="32" height="32" fill="#555" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg></div>`}
+                    <div class="duration-badge">${formatDuration(v.duration)}</div>
+                </div>
+                <div class="sidebar-video-info">
+                    <h4>${v.title}</h4>
+                    <p>MyTube</p>
+                    <p>${formatViews(v.views)} lượt xem</p>
+                </div>
+            </div>
+        `).join('');
+    }
+    function setupPlayerControls(video) {
+        const slider = document.getElementById('progressSlider');
+        const timeDisp = document.getElementById('timeDisplay');
+        video.ontimeupdate = () => {
+            if(video.duration) {
+                const pct = (video.currentTime/video.duration)*100;
+                slider.value = pct;
+                slider.style.background = `linear-gradient(to right, #dc2626 ${pct}%, rgba(255,255,255,0.3) ${pct}%)`;
+                timeDisp.textContent = `${formatDuration(video.currentTime)} / ${formatDuration(video.duration)}`;
+            }
+        };
+        video.onplay = () => { document.getElementById('playPauseIcon').innerHTML='<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; };
+        video.onpause = () => { document.getElementById('playPauseIcon').innerHTML='<path d="M8 5v14l11-7z"/>'; };
+    }
+    function togglePlay() { const v=document.getElementById('mainVideo'); v.paused?v.play():v.pause(); }
+    function seekVideo(val) { const v=document.getElementById('mainVideo'); if(v.duration) v.currentTime=(val/100)*v.duration; }
+    function changeVolume(val) { const v=document.getElementById('mainVideo'); v.volume=val; v.muted=val==0; }
+    function toggleMute() { const v=document.getElementById('mainVideo'); v.muted=!v.muted; document.getElementById('volumeSlider').value=v.muted?0:v.volume; }
+    function toggleFullscreen() { const w=document.getElementById('playerWrapper'); document.fullscreenElement?document.exitFullscreen():w.requestFullscreen(); }
+
+    // ===========================
+    // Upload
+    // ===========================
+    function showUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); resetUploadForm(); }
+    function hideUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); resetUploadForm(); }
+    function resetUploadForm() {
+        selectedFile=null; thumbnailData='';
+        document.getElementById('fileInput').value='';
+        document.getElementById('videoTitle').value='';
+        document.getElementById('videoDesc').value='';
+        document.getElementById('uploadPlaceholder').style.display='';
+        document.getElementById('uploadPreview').style.display='none';
+        document.getElementById('uploadForm').style.display='';
+        document.getElementById('uploadProgress').style.display='none';
+        document.getElementById('submitBtn').disabled=true;
+    }
+    function handleFileSelect(e) {
+        const file=e.target.files[0]; if(!file) return;
+        selectedFile=file;
+        document.getElementById('uploadPlaceholder').style.display='none';
+        document.getElementById('uploadPreview').style.display='';
+        document.getElementById('fileName').textContent=file.name;
+        document.getElementById('fileSize').textContent=formatSize(file.size);
+        document.getElementById('videoTitle').value=file.name.replace(/\.[^/.]+$/,'');
+        document.getElementById('submitBtn').disabled=false;
+        generateThumbnail(file).then(t=>{ thumbnailData=t; if(t) document.getElementById('previewImg').src=t; });
+    }
+    function generateThumbnail(file) {
+        return new Promise(resolve => {
+            const v=document.createElement('video'); v.preload='metadata'; v.muted=true; v.playsInline=true;
+            const url=URL.createObjectURL(file); v.src=url;
+            v.onloadeddata=()=>{ v.currentTime=Math.min(1,v.duration/4); };
+            v.onseeked=()=>{
+                const c=document.createElement('canvas'); c.width=320; c.height=180;
+                c.getContext('2d').drawImage(v,0,0,320,180);
+                URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg',0.7));
+            };
+            v.onerror=()=>{ URL.revokeObjectURL(url); resolve(''); };
+            setTimeout(()=>resolve(''),5000);
+        });
+    }
+    function getDuration(file) {
+        return new Promise(resolve => {
+            const v=document.createElement('video'); v.preload='metadata';
+            const url=URL.createObjectURL(file); v.src=url;
+            v.onloadedmetadata=()=>{ URL.revokeObjectURL(url); resolve(v.duration); };
+            v.onerror=()=>{ URL.revokeObjectURL(url); resolve(0); };
+        });
+    }
+    async function handleUpload() {
+        if(!selectedFile) return;
+        document.getElementById('uploadForm').style.display='none';
+        document.getElementById('uploadProgress').style.display='';
+        updateProgress(20,'Đang xử lý video...');
+        const dur = await getDuration(selectedFile);
+        updateProgress(50,'Đang tạo thumbnail...');
+        const record = {
+            id: genId(),
+            title: document.getElementById('videoTitle').value || selectedFile.name,
+            description: document.getElementById('videoDesc').value,
+            blob: selectedFile,
+            thumbnail: thumbnailData,
+            duration: dur,
+            size: selectedFile.size,
+            uploadDate: new Date().toISOString(),
+            views: 0
+        };
+        updateProgress(75,'Đang lưu vào database...');
+        await dbPut(record);
+        updateProgress(100,'Hoàn tất!');
+        setTimeout(()=>{ hideUploadModal(); loadVideos(); showToast('✅ Tải lên thành công!'); },800);
+    }
+    function updateProgress(pct,text) {
+        document.getElementById('progressFill').style.width=pct+'%';
+        document.getElementById('progressText').textContent=text+' '+pct+'%';
+    }
+
+    // ===========================
+    // Delete
+    // ===========================
+    async function deleteVideo(id) {
+        if(!confirm('Bạn có chắc muốn xóa video này?')) return;
+        await dbDelete(id);
+        if(currentVideoId===id) goHome();
+        loadVideos();
+        showToast('🗑️ Đã xóa video');
+    }
+    async function deleteCurrentVideo() {
+        if(!currentVideoId) return;
+        if(!confirm('Bạn có chắc muốn xóa video này?')) return;
+        await dbDelete(currentVideoId);
+        goHome();
+        loadVideos();
+        showToast('🗑️ Đã xóa video');
+    }
+
+    // ===========================
+    // Navigation
+    // ===========================
+    function goHome() {
+        currentVideoId=null;
+        document.getElementById('homePage').classList.remove('hidden');
+        document.getElementById('playerPage').classList.remove('active');
+        const v=document.getElementById('mainVideo'); v.pause(); v.src='';
+        loadVideos();
+    }
+    function toggleSidebar() {
+        const s=document.getElementById('sidebar'), m=document.getElementById('mainContent');
+        s.classList.toggle('hidden'); m.classList.toggle('expanded');
+    }
+
+    // ===========================
+    // PWA
+    // ===========================
+    // Dynamic manifest
+    function setupManifest() {
+        const iconSvg = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#0f0f0f"/><circle cx="256" cy="256" r="180" fill="none" stroke="#dc2626" stroke-width="3" opacity="0.3"/><circle cx="256" cy="256" r="140" fill="#dc2626" opacity="0.15"/><polygon points="210,160 210,352 370,256" fill="#dc2626"/></svg>`)}`;
+
+        // Generate PNG icons from SVG canvas
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const icons = [{ src: iconSvg, sizes: 'any', type: 'image/svg+xml', purpose: 'any' }];
+
+        sizes.forEach(size => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            // Draw icon
+            ctx.fillStyle = '#0f0f0f';
+            const r = size * 0.187;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, r);
+            ctx.fill();
+            // Red circle bg
+            ctx.fillStyle = 'rgba(220,38,38,0.15)';
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size*0.273, 0, Math.PI*2);
+            ctx.fill();
+            // Play triangle
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(size*0.41, size*0.31);
+            ctx.lineTo(size*0.41, size*0.69);
+            ctx.lineTo(size*0.72, size*0.5);
+            ctx.closePath();
+            ctx.fill();
+
+            icons.push({
+                src: canvas.toDataURL('image/png'),
+                sizes: `${size}x${size}`,
+                type: 'image/png',
+                purpose: 'any maskable'
+            });
+        });
+
+        const manifest = {
+            name: "MyTube - Lưu trữ & Xem Video",
+            short_name: "MyTube",
+            description: "Ứng dụng lưu trữ và xem video trực tiếp trong trình duyệt",
+            start_url: ".",
+            display: "standalone",
+            background_color: "#0f0f0f",
+            theme_color: "#dc2626",
+            orientation: "any",
+            lang: "vi",
+            icons: icons,
+            shortcuts: [{
+                name: "Tải lên video",
+                short_name: "Tải lên",
+                url: ".",
+                icons: [{ src: icons[1].src, sizes: "96x96" }]
+            }]
+        };
+
+        const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        let link = document.querySelector('link[rel="manifest"]');
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'manifest';
+            document.head.appendChild(link);
+        }
+        link.href = url;
+    }
+
+    // Service Worker (inline)
+    function setupServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+
+        const swCode = `
+const CACHE = 'mytube-v2';
+self.addEventListener('install', e => { self.skipWaiting(); });
+self.addEventListener('activate', e => {
+    e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+    self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+    if (e.request.method !== 'GET') return;
+    if (!e.request.url.startsWith(self.location.origin)) return;
+    e.respondWith(
+        caches.match(e.request).then(cached => {
+            const fetchPromise = fetch(e.request).then(resp => {
+                if (resp && resp.status === 200) {
+                    const clone = resp.clone();
+                    caches.open(CACHE).then(c => c.put(e.request, clone));
+                }
+                return resp;
+            }).catch(() => cached || new Response('Offline', {status:503}));
+            return cached || fetchPromise;
+        })
+    );
+});
+self.addEventListener('message', e => { if(e.data?.type==='SKIP_WAITING') self.skipWaiting(); });
+`;
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+
+        navigator.serviceWorker.register(swUrl).then(reg => {
+            console.log('[PWA] SW registered');
+            reg.addEventListener('updatefound', () => {
+                const nw = reg.installing;
+                if (!nw) return;
+                nw.addEventListener('statechange', () => {
+                    if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                        showToast('🔄 Có bản cập nhật mới!');
+                    }
+                });
+            });
+        }).catch(err => console.log('[PWA] SW failed:', err));
+    }
+
+    // Install prompt
+    function setupInstallPrompt() {
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwaInstallBtn').classList.add('show');
+        });
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            document.getElementById('pwaInstallBtn').classList.remove('show');
+            showToast('✅ Đã cài đặt MyTube thành công!');
+        });
+    }
+    async function installApp() {
+        if (!deferredPrompt) { showToast('App đã được cài đặt hoặc trình duyệt không hỗ trợ'); return; }
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') showToast('🎉 Đang cài đặt...');
+        deferredPrompt = null;
+        document.getElementById('pwaInstallBtn').classList.remove('show');
+    }
+
+    // ===========================
+    // Init
+    // ===========================
+    async function init() {
+        await openDB();
+        await loadVideos();
+        setupManifest();
+        setupServiceWorker();
+        setupInstallPrompt();
+
+        // Handle shortcut actions
+        const params = new URLSearchParams(location.search);
+        if (params.get('action') === 'upload') showUploadModal();
+    }
+    init();
+    </script>
+</body>
+</html>
